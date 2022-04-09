@@ -1,0 +1,113 @@
+---
+title: "Statistic_Project1"
+author: "Syuan-Bo,Huang"
+date: "2022/4/7"
+output: 
+  word_document: 
+    toc: yes
+  html_document: 
+    toc: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 資料簡介
+#### **Title**：the amount of page views for the top 1,000 websites on the Internet as of 2011
+Focus on 5 columns
+
+1. **Rank**: 網站排名
+2. **PageViews**: 該網站一年總瀏覽次數(我們要預測的資料)
+3. **UniqueVisitors**: 該網站一年不重複人次的瀏覽次數
+4. **HasAdvertising**: 該網站有無廣告
+5. **IsEnglish**: 該網站的主要語言是否為英文
+
+
+```{r cars, echo=TRUE}
+top.1000.sites <- read.csv('https://raw.githubusercontent.com/johnmyleswhite/ML_for_Hackers/master/05-Regression/data/top_1000_sites.tsv' ,sep = '\t',stringsAsFactors = FALSE)
+head(top.1000.sites[,c(1,4,6,7,8)],n=10)
+```
+
+## 分析概念及步驟說明
+
+PageViews是預測的對象
+開始做迴歸分析之前，先繪製 **PageViews** 與 **UniqueVistors** 間的**散布圖**，觀察兩者數值資料是否呈現性關係。
+
+```{r plot, echo=FALSE}
+library('ggplot2')
+ggplot(top.1000.sites, aes(x = PageViews, y=UniqueVisitors))+geom_point()
+```
+
+由上圖可發現兩者線性關係薄弱，從資料分布狀況推測為圖面比例尺問題，導致大部分資料集中於圖面左下角。
+接著單獨觀察 **PageViews** 的資料分布情形。
+
+```{r}
+ggplot(top.1000.sites,aes(x=PageViews))+geom_density()
+```
+
+結果呈現出無意義的密度圖，嘗試使用log轉換後的值繪製密度圖。
+
+```{r}
+ggplot(top.1000.sites,aes(x=log(PageViews)))+geom_density()
+```
+
+呈現密度圖較合乎邏輯，因此接下來採用log轉換後的PageViews和UniqueVisitors進行分析。
+重新製作兩者間log轉換後的散佈圖。
+
+```{r}
+ggplot(top.1000.sites,aes(x=log(PageViews),y=log(UniqueVisitors)))+geom_point()
+```
+
+其散佈結果呈現線性關係，使用method 'lm'去描繪迴歸線
+
+```{r}
+ggplot(top.1000.sites, aes(x =log(PageViews),y=log(UniqueVisitors))) +geom_point()+geom_smooth(method = 'lm', se = FALSE)
+```
+
+## 分析結果
+使用summary function做迴歸分析計算並總結分析結果
+
+```{r}
+lm.fit <- lm(log(PageViews) ~ log(UniqueVisitors),
+data = top.1000.sites)
+summary(lm.fit)
+```
+
+log(UniqueVisitor)的t-value為29.251(coef/std)，遠大於2，且p-value為2\*10**-16小於0.001，不大於0.05，因此log(UniqeiVisitors)的係數非0，表示log(UniqueVisitors)和log(PageViews)兩者間呈線性關係。
+兩者的R square值為0.4616，表示這個線性迴歸模型對這筆資料有46%的解釋性，表現還不錯。
+最後F-statistic的值為855.6，遠大於1，表示拒絕係數等於0的虛無假設，代表至少存在一個不為0的係數。
+
+\n
+\n
+接者觀察加入HasAdvertising和IsEnglish後的關係
+```{r}
+lm.fit <- lm(log(PageViews) ~ HasAdvertising + log(UniqueVisitors) + InEnglish,
+data = top.1000.sites)
+summary(lm.fit)
+```
+
+
+```{r}
+lm.fit <- lm(log(PageViews) ~ HasAdvertising,
+data = top.1000.sites)
+summary(lm.fit)$r.squared
+```
+
+```{r}
+lm.fit <- lm(log(PageViews) ~ log(UniqueVisitors),
+data = top.1000.sites)
+summary(lm.fit)$r.squared
+```
+
+```{r}
+lm.fit <- lm(log(PageViews) ~ InEnglish,
+data = top.1000.sites)
+summary(lm.fit)$r.squared
+```
+
+## Referance
+- Drew Conway and John Myles White (2012) Machine Learning for Hackers, 1st Edition, O’Reilly, Sebastopol, CA.
+
